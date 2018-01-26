@@ -12,6 +12,7 @@
 namespace PommProject\ApiPlatform;
 
 use ApiPlatform\Core\DataProvider\CollectionDataProviderInterface;
+use ApiPlatform\Core\Exception\ResourceClassNotSupportedException;
 use PommProject\Foundation\Pomm;
 use PommProject\Foundation\Where;
 use PommProject\ModelManager\Model\Model;
@@ -20,6 +21,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 class CollectionDataProvider implements CollectionDataProviderInterface
 {
+    const PAGE_PARAMETER_NAME_DEFAULT = 'page';
+
     private $pomm;
     private $requestStack;
     private $pagination;
@@ -48,6 +51,10 @@ class CollectionDataProvider implements CollectionDataProviderInterface
         }
 
         $modelName = "${resourceClass}Model";
+        if (!class_exists($modelName)) {
+            throw new ResourceClassNotSupportedException();
+        }
+
         $session = $this->pomm->getDefaultSession();
         $model = $session->getModel($modelName);
         $paginator = $model->paginateFindWhere(
@@ -62,7 +69,10 @@ class CollectionDataProvider implements CollectionDataProviderInterface
 
     private function getCurrentPage(Request $request): int
     {
-        return $request->query->get($this->pagination['items_per_page_parameter_name'], 1);
+        return $request->query->get(
+            $this->pagination['page_parameter_name'] ?? static::PAGE_PARAMETER_NAME_DEFAULT,
+            1
+        );
     }
 
     private function getOrderSuffix(Request $request): string
